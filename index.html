@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verdant — 나의 식물 케어</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sage: #4a7c59;
+    --sage-light: #7aab8a;
+    --sage-pale: #c8dfc e;
+    --earth: #8b6f47;
+    --cream: #f5f0e8;
+    --parchment: #ede8df;
+    --dark: #1c2b1e;
+    --mid: #3d5c42;
+    --text: #2c3e2d;
+    --muted: #7a8c7b;
+    --accent: #c9a84c;
+    --red-soft: #c0614a;
+    --blue-soft: #4a7a9b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ── LOADING ── */
+  #loading {
+    position: fixed; inset: 0;
+    background: var(--dark);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.8s ease;
+  }
+  #loading .leaf-anim {
+    font-size: 3rem;
+    animation: leafSpin 1s ease-in-out infinite alternate;
+  }
+  @keyframes leafSpin {
+    from { transform: rotate(-15deg) scale(0.9); }
+    to   { transform: rotate(15deg)  scale(1.1); }
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--dark);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 300;
+    letter-spacing: 0.12em;
+    color: var(--cream);
+  }
+  .logo span { color: var(--sage-light); font-style: italic; }
+  .header-right { display: flex; gap: 12px; align-items: center; }
+  .notif-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--cream);
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .notif-btn:hover { background: rgba(122,171,138,0.25); border-color: var(--sage-light); }
+  .notif-btn.active { background: var(--sage); border-color: var(--sage); }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    background: var(--dark);
+    padding: 0 32px;
+    gap: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .tab {
+    padding: 14px 20px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    position: relative;
+  }
+  .tab:hover { color: var(--cream); }
+  .tab.active {
+    color: var(--sage-light);
+    border-bottom-color: var(--sage-light);
+  }
+
+  /* ── MAIN CONTENT ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+
+  .section { display: none; }
+  .section.active { display: block; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── SECTION HEADINGS ── */
+  .sec-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.2rem;
+    font-weight: 300;
+    color: var(--dark);
+    margin-bottom: 6px;
+  }
+  .sec-title span { color: var(--sage); font-style: italic; }
+  .sec-sub {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin-bottom: 36px;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── DIAGNOSIS UPLOAD AREA ── */
+  .upload-zone {
+    border: 2px dashed #b8cdbf;
+    border-radius: 16px;
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(74,124,89,0.04);
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--sage);
+    background: rgba(74,124,89,0.08);
+  }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 3rem; margin-bottom: 16px; display: block; }
+  .upload-zone h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+  .upload-zone p { color: var(--muted); font-size: 0.85rem; }
+  #preview-img {
+    max-width: 320px;
+    max-height: 260px;
+    border-radius: 12px;
+    margin: 16px auto 0;
+    display: none;
+    object-fit: cover;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+
+  /* ── PLANT INFO FORM ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 28px 0;
+  }
+  @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .form-group input, .form-group select, .form-group textarea {
+    background: var(--parchment);
+    border: 1px solid #cfd8c7;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    color: var(--text);
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--sage);
+    background: #fff;
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 14px 32px;
+    border-radius: 40px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.25s;
+    border: none;
+    font-weight: 500;
+  }
+  .btn-primary {
+    background: var(--dark);
+    color: var(--cream);
+  }
+  .btn-primary:hover { background: var(--mid); transform: translateY(-1px); }
+  .btn-sage {
+    background: var(--sage);
+    color: #fff;
+  }
+  .btn-sage:hover { background: var(--mid); transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--sage);
+    color: var(--sage);
+  }
+  .btn-outline:hover { background: var(--sage); color: #fff; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+  /* ── DIAGNOSIS RESULT ── */
+  #diagnosis-result {
+    display: none;
+    margin-top: 32px;
+  }
+  .diag-card {
+    background: var(--dark);
+    color: var(--cream);
+    border-radius: 20px;
+    padding: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .diag-card::before {
+    content: '🌿';
+    position: absolute;
+    right: 24px; top: 24px;
+    font-size: 4rem;
+    opacity: 0.15;
+  }
+  .diag-card h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem;
+    font-weight: 300;
+    margin-bottom: 20px;
+    color: var(--sage-light);
+  }
+  .diag-status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 600px) { .diag-status-grid { grid-template-columns: 1fr 1fr; } }
+  .status-item {
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .status-item .si-label { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+  .status-item .si-val { font-size: 1.4rem; }
+  .status-item .si-text { font-size: 0.82rem; color: rgba(255,255,255,0.7); margin-top: 2px; }
+  .diag-body { font-size: 0.9rem; line-height: 1.8; color: rgba(255,255,255,0.8); }
+  .diag-body strong { color: var(--sage-light); }
+
+  /* ── TODAY'S PLAN ── */
+  .today-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .today-date {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 3.5rem;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--dark);
+  }
+  .today-date small {
+    display: block;
+    font-size: 1rem;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .progress-ring-wrap { text-align: center; }
+  .progress-ring-wrap p { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+
+  .task-list { display: flex; flex-direction: column; gap: 12px; }
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--parchment);
+    border-radius: 14px;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1.5px solid transparent;
+  }
+  .task-item:hover { border-color: #b8cdbf; transform: translateX(2px); }
+  .task-item.done { background: rgba(74,124,89,0.08); border-color: rgba(74,124,89,0.2); }
+  .task-check {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid #b8cdbf;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+  }
+  .task-item.done .task-check { background: var(--sage); border-color: var(--sage); }
+  .task-emoji { font-size: 1.4rem; flex-shrink: 0; }
+  .task-info { flex: 1; }
+  .task-info h4 { font-size: 0.95rem; font-weight: 500; }
+  .task-info p { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .task-item.done .task-info h4 { text-decoration: line-through; color: var(--muted); }
+  .task-time { font-size: 0.75rem; color: var(--muted); flex-shrink: 0; }
+
+  /* PHOTO UPLOAD IN TODAY */
+  .photo-upload-card {
+    background: linear-gradient(135deg, var(--dark) 0%, var(--mid) 100%);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    color: var(--cream);
+    flex-wrap: wrap;
+  }
+  .photo-upload-card .puc-text h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 300;
+    margin-bottom: 4px;
+  }
+  .photo-upload-card .puc-text p { font-size: 0.82rem; opacity: 0.7; }
+  .photo-upload-card .btn { margin-top: 12px; }
+  .photo-thumb-grid {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px;
+  }
+  .photo-thumb {
+    width: 72px; height: 72px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.15);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .photo-thumb:hover { transform: scale(1.05); }
+
+  /* ── MY PLANTS ── */
+  .plants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+  .plant-card {
+    background: var(--parchment);
+    border-radius: 20px;
+    overflow: hidden;
+    transition: transform 0.25s, box-shadow 0.25s;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+  }
+  .plant-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.1);
+    border-color: #b8cdbf;
+  }
+  .plant-card-img {
+    height: 180px;
+    background: linear-gradient(135deg, #c8dfce 0%, #a8c9b0 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .plant-card-img img {
+    width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;
+  }
+  .health-badge {
+    position: absolute; top: 12px; right: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    backdrop-filter: blur(8px);
+  }
+  .health-good { background: rgba(74,124,89,0.85); color: #fff; }
+  .health-ok   { background: rgba(201,168,76,0.85);  color: #fff; }
+  .health-bad  { background: rgba(192,97,74,0.85);   color: #fff; }
+  .plant-card-body { padding: 20px; }
+  .plant-card-body h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem;
+    font-weight: 400;
+    margin-bottom: 4px;
+  }
+  .plant-card-body .species { font-size: 0.78rem; color: var(--muted); font-style: italic; margin-bottom: 14px; }
+  .plant-mini-stats { display: flex; gap: 10px; }
+  .pms {
+    flex: 1; text-align: center;
+    background: rgba(74,124,89,0.08);
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .pms .pms-val { font-size: 1rem; }
+  .pms .pms-label { font-size: 0.68rem; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .add-plant-card {
+    border-radius: 20px;
+    border: 2px dashed #b8cdbf;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 260px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted);
+    background: rgba(74,124,89,0.03);
+  }
+  .add-plant-card:hover { border-color: var(--sage); color: var(--sage); background: rgba(74,124,89,0.06); }
+  .add-plant-card span { font-size: 2.5rem; }
+  .add-plant-card p { font-size: 0.82rem; letter-spacing: 0.06em; }
+
+  /* ── SCHEDULE SECTION ── */
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+  @media (max-width: 600px) { .week-grid { grid-template-columns: repeat(4, 1fr); } }
+  .week-day {
+    background: var(--parchment);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1.5px solid transparent;
+  }
+  .week-day .wd-day { color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; font-size: 0.7rem; }
+  .week-day .wd-num { font-size: 1.2rem; font-family: 'Cormorant Garamond', serif; margin-bottom: 6px; }
+  .week-day .wd-dot { width: 6px; height: 6px; border-radius: 50%; background: #ccc; margin: 0 auto; }
+  .week-day.has-tasks .wd-dot { background: var(--sage); }
+  .week-day.today { background: var(--dark); color: var(--cream); border-color: var(--dark); }
+  .week-day.today .wd-day { color: rgba(255,255,255,0.5); }
+  .week-day.today .wd-dot { background: var(--sage-light); }
+  .week-day:hover:not(.today) { border-color: #b8cdbf; }
+
+  .schedule-list { display: flex; flex-direction: column; gap: 16px; }
+  .schedule-item {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 20px;
+    background: var(--parchment);
+    border-radius: 14px;
+    border-left: 3px solid var(--sage);
+  }
+  .schedule-item.water { border-left-color: var(--blue-soft); }
+  .schedule-item.fertilize { border-left-color: var(--accent); }
+  .schedule-item.repot { border-left-color: var(--earth); }
+  .si-icon { font-size: 1.8rem; }
+  .si-body h4 { font-size: 0.95rem; font-weight: 500; margin-bottom: 4px; }
+  .si-body p { font-size: 0.82rem; color: var(--muted); }
+  .si-tag {
+    margin-left: auto;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 10px;
+    background: rgba(74,124,89,0.1);
+    color: var(--sage);
+    flex-shrink: 0;
+  }
+
+  /* ── NOTIFICATION TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 32px; right: 32px;
+    background: var(--dark);
+    color: var(--cream);
+    border-radius: 14px;
+    padding: 18px 24px;
+    max-width: 320px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+    transform: translateY(120px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 500;
+    border-left: 3px solid var(--sage-light);
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast h4 { font-size: 0.85rem; margin-bottom: 4px; color: var(--sage-light); }
+  #toast p  { font-size: 0.8rem; opacity: 0.8; line-height: 1.5; }
+
+  /* ── LOADING SPINNER ── */
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── SVG RING ── */
+  .ring-svg { transform: rotate(-90deg); }
+
+  /* ── MODAL ── */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(28,43,30,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--cream);
+    border-radius: 24px;
+    padding: 40px;
+    max-width: 480px;
+    width: 100%;
+    animation: fadeUp 0.3s ease;
+  }
+  .modal h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 300;
+    margin-bottom: 24px;
+  }
+  .modal-actions { display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end; }
+
+  /* ── MISC ── */
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .badge {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+  }
+  .badge-green  { background: rgba(74,124,89,0.12);  color: var(--sage); }
+  .badge-amber  { background: rgba(201,168,76,0.12); color: #8a6f20; }
+  .badge-blue   { background: rgba(74,122,155,0.12); color: var(--blue-soft); }
+
+  .divider { height: 1px; background: #ddd6cc; margin: 28px 0; }
+
+  .tip-box {
+    background: rgba(74,124,89,0.07);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 0.85rem;
+    border-left: 3px solid var(--sage);
+    margin: 16px 0;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  @media (max-width: 480px) {
+    header { padding: 16px 20px; }
+    .tabs { padding: 0 16px; }
+    main  { padding: 24px 16px; }
+    .logo { font-size: 1.4rem; }
+    .today-date { font-size: 2.4rem; }
+  }
+
+  /* ── CAMERA MODAL ── */
+  #camera-modal-bg {
+    position: fixed; inset: 0;
+    background: #000;
+    z-index: 300;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #camera-modal-bg.open { display: flex; }
+
+  #camera-video {
+    width: 100%; max-width: 520px;
+    border-radius: 0;
+    display: block;
+    object-fit: cover;
+    max-height: 65vh;
+    background: #111;
+  }
+
+  #camera-canvas { display: none; }
+
+  .cam-ui {
+    width: 100%; max-width: 520px;
+    padding: 20px 24px 32px;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .cam-top {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .cam-top span {
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+  }
+  .cam-close {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .cam-close:hover { background: rgba(255,255,255,0.2); }
+
+  .cam-shutter-row {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+  .cam-flip {
+    background: rgba(255,255,255,0.1);
+    border: none; color: #fff;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .cam-flip:hover { background: rgba(255,255,255,0.2); }
+
+  .cam-shutter {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: #fff;
+    border: 5px solid rgba(255,255,255,0.3);
+    cursor: pointer;
+    transition: transform 0.1s, background 0.1s;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
+  }
+  .cam-shutter:hover { background: #e0e0e0; }
+  .cam-shutter:active { transform: scale(0.93); }
+
+  .cam-mode-row {
+    display: flex; gap: 10px;
+  }
+  .cam-mode-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.6);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .cam-mode-btn.active, .cam-mode-btn:hover {
+    background: var(--sage);
+    border-color: var(--sage);
+    color: #fff;
+  }
+
+  /* preview captured photo */
+  #cam-preview-wrap {
+    display: none;
+    width: 100%; max-width: 520px;
+    position: relative;
+  }
+  #cam-preview-shot {
+    width: 100%; max-height: 65vh;
+    object-fit: contain;
+    display: block;
+    background: #000;
+  }
+  .cam-preview-ui {
+    width: 100%; max-width: 520px;
+    background: #111;
+    padding: 20px 24px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .cam-preview-actions {
+    display: flex; gap: 16px;
+  }
+  .cam-preview-actions button {
+    padding: 12px 28px;
+    border-radius: 30px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: none;
+    font-weight: 500;
+  }
+  .cam-retake { background: rgba(255,255,255,0.12); color: #fff; }
+  .cam-retake:hover { background: rgba(255,255,255,0.2); }
+  .cam-save { background: var(--sage); color: #fff; }
+  .cam-save:hover { background: var(--mid); }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="leaf-anim">🌿</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo"><span>V</span>erdant</div>
+  <div class="header-right">
+    <button class="notif-btn" id="notifToggle" onclick="toggleNotifications()">
+      🔔 알림 켜기
+    </button>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('today')">🌱 오늘의 케어</div>
+  <div class="tab" onclick="switchTab('diagnosis')">🔍 진단</div>
+  <div class="tab" onclick="switchTab('plants')">🪴 내 식물</div>
+  <div class="tab" onclick="switchTab('schedule')">📅 일정</div>
+</div>
+
+<!-- MAIN -->
+<main>
+
+  <!-- ── TODAY'S CARE ── -->
+  <div id="sec-today" class="section active">
+    <div class="today-header">
+      <div class="today-date">
+        <small id="today-weekday">Monday</small>
+        <span id="today-datenum">03</span>
+        <span style="font-size:1.6rem; color:var(--muted)"> / </span>
+        <span id="today-month" style="font-size:1.6rem; color:var(--muted)">June</span>
+      </div>
+      <div class="progress-ring-wrap">
+        <svg width="80" height="80" class="ring-svg">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="#e0d8cc" stroke-width="5"/>
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--sage)" stroke-width="5"
+            stroke-dasharray="201" stroke-dashoffset="201" stroke-linecap="round"
+            id="ring-progress" style="transition:stroke-dashoffset 0.6s ease"/>
+        </svg>
+        <svg width="80" height="80" style="position:absolute;margin-left:-80px">
+          <text x="40" y="45" text-anchor="middle" font-size="16" font-family="DM Sans,sans-serif" fill="var(--dark)" id="ring-text">0%</text>
+        </svg>
+        <p>오늘 완료</p>
+      </div>
+    </div>
+
+    <!-- Daily photo upload -->
+    <div class="photo-upload-card">
+      <div style="font-size:2.8rem">📸</div>
+      <div class="puc-text" style="flex:1">
+        <h3>오늘의 식물 사진</h3>
+        <p>매일 사진을 업로드해 성장을 기록하세요</p>
+        <div class="photo-thumb-grid" id="daily-photos"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end">
+        <button class="btn btn-sage" onclick="openCamera('daily')" style="white-space:nowrap">📷 카메라 촬영</button>
+        <label style="cursor:pointer">
+          <input type="file" accept="image/*" style="display:none" onchange="addDailyPhoto(event)" multiple>
+          <span class="btn btn-outline" style="display:inline-block;white-space:nowrap">🖼 갤러리</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Task list -->
+    <div class="task-list" id="task-list"></div>
+
+    <div class="divider"></div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap">
+      <button class="btn btn-sage" onclick="generatePlan()">🌿 오늘의 플랜 새로 생성</button>
+      <button class="btn btn-outline" onclick="sendReminder()">🔔 지금 알림 보내기</button>
+    </div>
+  </div>
+
+  <!-- ── DIAGNOSIS ── -->
+  <div id="sec-diagnosis" class="section">
+    <h2 class="sec-title">식물 <span>진단</span></h2>
+    <p class="sec-sub">사진을 업로드하면 AI가 현재 상태를 분석하고 관리 계획을 제안합니다.</p>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" accept="image/*" onchange="onFileSelect(event)" id="diag-file-input">
+      <span class="upload-icon">🌿</span>
+      <h3>식물 사진을 올려주세요</h3>
+      <p>JPG, PNG 지원 · 클릭하거나 사진을 드래그하세요</p>
+      <img id="preview-img" alt="preview">
+    </div>
+    <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn btn-sage" onclick="openCamera('diag')">📷 카메라로 바로 촬영</button>
+      <label style="cursor:pointer">
+        <input type="file" accept="image/*" style="display:none" onchange="onFileSelect(event)">
+        <span class="btn btn-outline" style="display:inline-block">🖼 갤러리에서 선택</span>
+      </label>
+    </div>
+
+    <div class="form-grid" style="margin-top:28px">
+      <div class="form-group">
+        <label>식물 이름 (선택)</label>
+        <input type="text" id="plant-name" placeholder="예: 몬스테라, 스투키..." />
+      </div>
+      <div class="form-group">
+        <label>식물 종류</label>
+        <select id="plant-type">
+          <option value="">-- 선택 --</option>
+          <option>관엽식물</option>
+          <option>다육식물 / 선인장</option>
+          <option>허브</option>
+          <option>꽃식물</option>
+          <option>수생식물</option>
+          <option>기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>마지막 물 준 날</label>
+        <input type="date" id="last-water" />
+      </div>
+      <div class="form-group">
+        <label>햇빛 환경</label>
+        <select id="sunlight">
+          <option value="">-- 선택 --</option>
+          <option>직사광선 (창가)</option>
+          <option>밝은 간접광</option>
+          <option>반음지</option>
+          <option>실내 저광량</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column: 1/-1">
+        <label>걱정되는 증상 (선택)</label>
+        <textarea id="symptoms" placeholder="예: 잎이 노래지고 있어요, 뿌리가 화분 밖으로 나와요..."></textarea>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="diag-btn" onclick="runDiagnosis()">
+      🔍 AI 진단 시작
+    </button>
+
+    <div id="diagnosis-result">
+      <div class="divider"></div>
+      <div class="diag-card" id="diag-card-content"></div>
+      <div style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap">
+        <button class="btn btn-sage" onclick="savePlantFromDiag()">🪴 내 식물에 추가</button>
+        <button class="btn btn-outline" onclick="createPlanFromDiag()">📅 관리 플랜 생성</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MY PLANTS ── -->
+  <div id="sec-plants" class="section">
+    <h2 class="sec-title">내 <span>식물들</span></h2>
+    <p class="sec-sub">등록된 식물의 상태를 한눈에 확인하세요.</p>
+    <div class="plants-grid" id="plants-grid"></div>
+  </div>
+
+  <!-- ── SCHEDULE ── -->
+  <div id="sec-schedule" class="section">
+    <h2 class="sec-title">케어 <span>일정</span></h2>
+    <p class="sec-sub">이번 주 식물 관리 일정입니다.</p>
+    <div class="week-grid" id="week-grid"></div>
+    <div class="schedule-list" id="schedule-list"></div>
+  </div>
+
+</main>
+
+<!-- MODAL: Add Plant -->
+<div class="modal-bg" id="add-plant-modal">
+  <div class="modal">
+    <h2>새 식물 추가</h2>
+    <div class="form-grid" style="margin:0 0 8px">
+      <div class="form-group">
+        <label>식물 이름</label>
+        <input type="text" id="new-name" placeholder="예: 몬스테라">
+      </div>
+      <div class="form-group">
+        <label>학명 / 종류</label>
+        <input type="text" id="new-species" placeholder="예: Monstera deliciosa">
+      </div>
+      <div class="form-group">
+        <label>물 주는 주기 (일)</label>
+        <input type="number" id="new-water" value="7" min="1" max="30">
+      </div>
+      <div class="form-group">
+        <label>건강 상태</label>
+        <select id="new-health">
+          <option value="good">좋음 😊</option>
+          <option value="ok">보통 😐</option>
+          <option value="bad">나쁨 😟</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('add-plant-modal')">취소</button>
+      <button class="btn btn-sage" onclick="addPlant()">추가하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLANT DETAIL MODAL -->
+<div class="modal-bg" id="plant-detail-modal">
+  <div class="modal" style="max-width:520px">
+    <div id="plant-detail-content"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('plant-detail-modal')">닫기</button>
+      <button class="btn btn-primary" onclick="runQuickDiag()">🔍 빠른 진단</button>
+    </div>
+  </div>
+</div>
+
+<!-- CAMERA MODAL -->
+<div id="camera-modal-bg">
+  <!-- Live viewfinder -->
+  <div id="cam-live-wrap" style="width:100%;max-width:520px">
+    <video id="camera-video" autoplay playsinline muted></video>
+  </div>
+  <canvas id="camera-canvas"></canvas>
+
+  <!-- Captured preview -->
+  <div id="cam-preview-wrap">
+    <img id="cam-preview-shot" alt="촬영된 사진">
+  </div>
+
+  <!-- Live UI -->
+  <div class="cam-ui" id="cam-live-ui">
+    <div class="cam-top">
+      <span id="cam-label-text">식물 사진 촬영</span>
+      <button class="cam-close" onclick="closeCamera()">✕</button>
+    </div>
+    <div class="cam-mode-row">
+      <button class="cam-mode-btn active" id="mode-env"  onclick="switchFacing('environment')">🌿 후면</button>
+      <button class="cam-mode-btn"        id="mode-user" onclick="switchFacing('user')">🤳 전면</button>
+    </div>
+    <div class="cam-shutter-row">
+      <button class="cam-flip" onclick="switchFacing()" title="카메라 전환">🔄</button>
+      <button class="cam-shutter" onclick="capturePhoto()" title="촬영"></button>
+      <div style="width:44px"></div>
+    </div>
+  </div>
+
+  <!-- Preview UI (after capture) -->
+  <div class="cam-preview-ui" id="cam-preview-ui" style="display:none">
+    <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;letter-spacing:0.06em;text-transform:uppercase">촬영된 사진</p>
+    <div class="cam-preview-actions">
+      <button class="cam-retake" onclick="retakePhoto()">🔄 다시 찍기</button>
+      <button class="cam-save"   onclick="savePhoto()">✅ 저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <h4 id="toast-title">🌿 Verdant</h4>
+  <p id="toast-msg">알림 메시지</p>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let notifEnabled = false;
+let diagImageBase64 = null;
+let selectedPlantIdx = null;
+let taskCompletionMap = JSON.parse(localStorage.getItem('vd-tasks') || '{}');
+let dailyPhotos = [];
+
+const PLANTS_KEY = 'vd-plants';
+let plants = JSON.parse(localStorage.getItem(PLANTS_KEY) || 'null') || [
+  { name: '몬스테라', species: 'Monstera deliciosa', emoji: '🌿', health: 'good', waterDays: 7, lastWater: daysAgo(2), nextCare: ['물 주기', '잎 닦기'] },
+  { name: '스투키', species: 'Sansevieria cylindrica', emoji: '🌵', health: 'ok', waterDays: 14, lastWater: daysAgo(10), nextCare: ['물 주기'] },
+  { name: '아이비', species: 'Hedera helix', emoji: '🍀', health: 'good', waterDays: 5, lastWater: daysAgo(4), nextCare: ['물 주기', '분무'] },
+];
+
+function savePlants() { localStorage.setItem(PLANTS_KEY, JSON.stringify(plants)); }
+function daysAgo(n) {
+  const d = new Date(); d.setDate(d.getDate() - n);
+  return d.toISOString().split('T')[0];
+}
+
+// Base tasks template
+const BASE_TASKS = [
+  { id: 't1', emoji: '💧', title: '물 주기 확인', desc: '흙 2cm 깊이가 건조한지 확인 후 물 주기', time: '오전 8:00', type: 'water' },
+  { id: 't2', emoji: '☀️', title: '햇빛 조절', desc: '커튼을 열어 오전 햇빛 확보', time: '오전 9:00', type: 'sun' },
+  { id: 't3', emoji: '🌫️', title: '잎 분무', desc: '습도 유지를 위해 잎 표면에 분무', time: '오후 1:00', type: 'mist' },
+  { id: 't4', emoji: '🔍', title: '해충 확인', desc: '잎 뒷면 및 줄기에 해충 여부 점검', time: '오후 3:00', type: 'check' },
+  { id: 't5', emoji: '📸', title: '오늘의 사진 기록', desc: '성장 추이 기록을 위한 일일 사진 촬영', time: '오후 6:00', type: 'photo' },
+];
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const el = document.getElementById('loading');
+    el.style.opacity = '0';
+    setTimeout(() => el.style.display = 'none', 800);
+  }, 1200);
+
+  initDate();
+  renderTasks();
+  renderPlants();
+  renderWeek();
+  renderSchedule();
+  checkMissedWater();
+});
+
+function initDate() {
+  const now = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('today-weekday').textContent = days[now.getDay()];
+  document.getElementById('today-datenum').textContent = String(now.getDate()).padStart(2,'0');
+  document.getElementById('today-month').textContent = months[now.getMonth()];
+  document.getElementById('last-water').value = now.toISOString().split('T')[0];
+}
+
+// ═══════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const ids = ['today','diagnosis','plants','schedule'];
+    t.classList.toggle('active', ids[i] === name);
+  });
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+//  TASKS
+// ═══════════════════════════════════════════════
+function renderTasks() {
+  const list = document.getElementById('task-list');
+  const today = new Date().toDateString();
+  list.innerHTML = '';
+  let done = 0;
+  BASE_TASKS.forEach(t => {
+    const key = today + '_' + t.id;
+    const isDone = !!taskCompletionMap[key];
+    if (isDone) done++;
+    const div = document.createElement('div');
+    div.className = 'task-item' + (isDone ? ' done' : '');
+    div.innerHTML = `
+      <div class="task-check">${isDone ? '✓' : ''}</div>
+      <div class="task-emoji">${t.emoji}</div>
+      <div class="task-info">
+        <h4>${t.title}</h4>
+        <p>${t.desc}</p>
+      </div>
+      <div class="task-time">${t.time}</div>
+    `;
+    div.onclick = () => toggleTask(t.id, key, div);
+    list.appendChild(div);
+  });
+  updateRing(done, BASE_TASKS.length);
+}
+
+function toggleTask(id, key, el) {
+  taskCompletionMap[key] = !taskCompletionMap[key];
+  localStorage.setItem('vd-tasks', JSON.stringify(taskCompletionMap));
+  renderTasks();
+  if (taskCompletionMap[key]) showToast('✅ 완료!', BASE_TASKS.find(t=>t.id===id)?.title + ' 항목을 완료했어요.');
+}
+
+function updateRing(done, total) {
+  const pct = total ? Math.round(done/total*100) : 0;
+  const circumference = 201;
+  const offset = circumference - (circumference * pct / 100);
+  document.getElementById('ring-progress').style.strokeDashoffset = offset;
+  document.getElementById('ring-text').textContent = pct + '%';
+}
+
+function generatePlan() {
+  const today = new Date().toDateString();
+  BASE_TASKS.forEach(t => { delete taskCompletionMap[today + '_' + t.id]; });
+  localStorage.setItem('vd-tasks', JSON.stringify(taskCompletionMap));
+  renderTasks();
+  showToast('🌿 플랜 생성', '오늘의 식물 케어 플랜이 초기화되었어요!');
+}
+
+// ═══════════════════════════════════════════════
+//  DAILY PHOTOS
+// ═══════════════════════════════════════════════
+function addDailyPhoto(e) {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    const url = URL.createObjectURL(file);
+    dailyPhotos.push(url);
+  });
+  renderDailyPhotos();
+  showToast('📸 사진 저장', `${files.length}장의 오늘 식물 사진이 기록되었어요.`);
+}
+
+function renderDailyPhotos() {
+  const grid = document.getElementById('daily-photos');
+  grid.innerHTML = dailyPhotos.map(url =>
+    `<img src="${url}" class="photo-thumb" onclick="viewPhoto('${url}')">`
+  ).join('');
+}
+
+function viewPhoto(url) {
+  showToast('📸 사진 보기', '전체화면 기능은 실제 앱에서 지원됩니다.');
+}
+
+// ═══════════════════════════════════════════════
+//  DIAGNOSIS
+// ═══════════════════════════════════════════════
+function onFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    diagImageBase64 = ev.target.result.split(',')[1];
+    const img = document.getElementById('preview-img');
+    img.src = ev.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runDiagnosis() {
+  const btn = document.getElementById('diag-btn');
+  const name = document.getElementById('plant-name').value;
+  const type = document.getElementById('plant-type').value;
+  const sunlight = document.getElementById('sunlight').value;
+  const symptoms = document.getElementById('symptoms').value;
+  const lastWater = document.getElementById('last-water').value;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>AI 분석 중...';
+
+  const prompt = `당신은 전문 식물 관리사입니다. 다음 정보를 바탕으로 식물 상태를 진단하고 관리 계획을 JSON으로 반환하세요.
+
+식물 정보:
+- 이름: ${name || '미입력'}
+- 종류: ${type || '미입력'}
+- 햇빛 환경: ${sunlight || '미입력'}
+- 마지막 물 준 날: ${lastWater || '미입력'}
+- 증상: ${symptoms || '없음'}
+${diagImageBase64 ? '- 사진: 첨부됨' : ''}
+
+다음 JSON 형식으로만 응답하세요 (코드블록 없이):
+{
+  "overall": "좋음|보통|나쁨",
+  "overall_emoji": "😊|😐|😟",
+  "water_status": "충분|보통|부족",
+  "light_status": "충분|적당|부족",
+  "soil_status": "좋음|보통|교체필요",
+  "summary": "2-3문장 현재 상태 요약",
+  "issues": ["문제점1", "문제점2"],
+  "week_plan": ["월요일: ...", "수요일: ...", "금요일: ..."],
+  "tip": "오늘 바로 할 수 있는 핵심 팁 1가지"
+}`;
+
+  try {
+    const messages = [{ role: 'user', content: diagImageBase64 ? [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: diagImageBase64 } },
+      { type: 'text', text: prompt }
+    ] : prompt }];
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages
+      })
+    });
+    const data = await res.json();
+    const text = data.content.map(c => c.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    renderDiagResult(result);
+  } catch(err) {
+    // fallback demo
+    renderDiagResult({
+      overall: '보통', overall_emoji: '😐',
+      water_status: '부족', light_status: '적당', soil_status: '좋음',
+      summary: '잎 끝이 약간 건조해 보이며 수분이 부족한 상태입니다. 햇빛 환경은 적절하지만 물 주는 주기를 조정할 필요가 있습니다.',
+      issues: ['수분 부족', '잎 끝 갈변 가능성'],
+      week_plan: ['월요일: 물 주기 (흙 깊이 2cm 확인 후)', '수요일: 잎 분무 + 해충 점검', '금요일: 비료 소량 첨가'],
+      tip: '오늘 당장 저면관수로 20분간 흠뻑 물을 주세요.'
+    });
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '🔍 AI 진단 시작';
+}
+
+function renderDiagResult(r) {
+  const healthColor = r.overall === '좋음' ? '#7aab8a' : r.overall === '보통' ? '#c9a84c' : '#c0614a';
+  document.getElementById('diag-card-content').innerHTML = `
+    <h3>진단 결과 ${r.overall_emoji}</h3>
+    <div class="diag-status-grid">
+      <div class="status-item">
+        <div class="si-label">물 상태</div>
+        <div class="si-val">💧</div>
+        <div class="si-text">${r.water_status}</div>
+      </div>
+      <div class="status-item">
+        <div class="si-label">햇빛</div>
+        <div class="si-val">☀️</div>
+        <div class="si-text">${r.light_status}</div>
+      </div>
+      <div class="status-item">
+        <div class="si-label">흙 상태</div>
+        <div class="si-val">🌱</div>
+        <div class="si-text">${r.soil_status}</div>
+      </div>
+    </div>
+    <div class="diag-body">
+      <p style="margin-bottom:14px">${r.summary}</p>
+      ${r.issues.length ? `<p style="margin-bottom:8px"><strong>🔸 발견된 문제</strong></p>
+        <ul style="margin:0 0 16px 16px; line-height:1.9">${r.issues.map(i=>`<li>${i}</li>`).join('')}</ul>` : ''}
+      <p style="margin-bottom:8px"><strong>📅 이번 주 케어 플랜</strong></p>
+      <ul style="margin:0 0 16px 16px; line-height:1.9">${r.week_plan.map(p=>`<li>${p}</li>`).join('')}</ul>
+      <p><strong>💡 오늘의 팁</strong></p>
+      <div style="background:rgba(122,171,138,0.15);border-radius:10px;padding:12px 16px;margin-top:8px;color:rgba(255,255,255,0.9)">${r.tip}</div>
+    </div>
+  `;
+  document.getElementById('diagnosis-result').style.display = 'block';
+  document.getElementById('diagnosis-result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  showToast('🔍 진단 완료', '식물 상태 분석이 완료되었습니다!');
+}
+
+function savePlantFromDiag() {
+  const name = document.getElementById('plant-name').value || '새 식물';
+  plants.push({ name, species: document.getElementById('plant-type').value || '', emoji: '🌿', health: 'ok', waterDays: 7, lastWater: new Date().toISOString().split('T')[0], nextCare: [] });
+  savePlants();
+  renderPlants();
+  showToast('🪴 저장 완료', `"${name}" 식물이 목록에 추가되었어요.`);
+}
+
+function createPlanFromDiag() {
+  switchTab('today');
+  showToast('📅 플랜 생성', '진단 결과를 바탕으로 오늘의 플랜이 업데이트되었어요.');
+}
+
+// ═══════════════════════════════════════════════
+//  MY PLANTS
+// ═══════════════════════════════════════════════
+function renderPlants() {
+  const grid = document.getElementById('plants-grid');
+  grid.innerHTML = '';
+  plants.forEach((p, i) => {
+    const daysLeft = p.waterDays - daysSince(p.lastWater);
+    const healthClass = { good: 'health-good', ok: 'health-ok', bad: 'health-bad' }[p.health];
+    const healthText  = { good: '건강함', ok: '주의', bad: '위험' }[p.health];
+    const card = document.createElement('div');
+    card.className = 'plant-card';
+    card.onclick = () => openPlantDetail(i);
+    card.innerHTML = `
+      <div class="plant-card-img">
+        <span>${p.emoji}</span>
+        <span class="health-badge ${healthClass}">${healthText}</span>
+      </div>
+      <div class="plant-card-body">
+        <h3>${p.name}</h3>
+        <p class="species">${p.species || '—'}</p>
+        <div class="plant-mini-stats">
+          <div class="pms">
+            <div class="pms-val">💧</div>
+            <div class="pms-label">${daysLeft > 0 ? daysLeft + '일 후' : '오늘!'}</div>
+          </div>
+          <div class="pms">
+            <div class="pms-val">${daysSince(p.lastWater)}</div>
+            <div class="pms-label">지난 일수</div>
+          </div>
+          <div class="pms">
+            <div class="pms-val">${p.waterDays}</div>
+            <div class="pms-label">물 주기</div>
+          </div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+  // Add button
+  const add = document.createElement('div');
+  add.className = 'add-plant-card';
+  add.onclick = () => openModal('add-plant-modal');
+  add.innerHTML = `<span>＋</span><p>식물 추가하기</p>`;
+  grid.appendChild(add);
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return 0;
+  const diff = new Date() - new Date(dateStr);
+  return Math.floor(diff / 86400000);
+}
+
+function openPlantDetail(idx) {
+  selectedPlantIdx = idx;
+  const p = plants[idx];
+  const daysLeft = p.waterDays - daysSince(p.lastWater);
+  document.getElementById('plant-detail-content').innerHTML = `
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;margin-bottom:4px">
+      ${p.emoji} ${p.name}
+    </h2>
+    <p style="color:var(--muted);font-style:italic;margin-bottom:20px">${p.species || '미등록'}</p>
+    <div class="badge-row">
+      <span class="badge badge-green">건강: ${{ good:'좋음', ok:'보통', bad:'나쁨' }[p.health]}</span>
+      <span class="badge badge-blue">물 주기: ${p.waterDays}일</span>
+    </div>
+    <div class="tip-box">
+      💧 다음 물 주기: <strong>${daysLeft > 0 ? daysLeft + '일 후' : '오늘 물을 주세요!'}</strong><br>
+      마지막 물 준 날: ${p.lastWater || '미기록'}
+    </div>
+    ${p.nextCare?.length ? `<p style="margin-top:16px;font-size:0.85rem;color:var(--muted)">예정 케어: ${p.nextCare.join(', ')}</p>` : ''}
+  `;
+  openModal('plant-detail-modal');
+}
+
+function addPlant() {
+  const name = document.getElementById('new-name').value.trim();
+  if (!name) return;
+  plants.push({
+    name,
+    species: document.getElementById('new-species').value,
+    emoji: '🌱',
+    health: document.getElementById('new-health').value,
+    waterDays: parseInt(document.getElementById('new-water').value) || 7,
+    lastWater: new Date().toISOString().split('T')[0],
+    nextCare: []
+  });
+  savePlants();
+  renderPlants();
+  closeModal('add-plant-modal');
+  showToast('🪴 식물 추가', `"${name}" 이(가) 등록되었어요.`);
+}
+
+function runQuickDiag() {
+  closeModal('plant-detail-modal');
+  switchTab('diagnosis');
+  if (selectedPlantIdx !== null) {
+    document.getElementById('plant-name').value = plants[selectedPlantIdx].name;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  SCHEDULE
+// ═══════════════════════════════════════════════
+function renderWeek() {
+  const grid = document.getElementById('week-grid');
+  const now = new Date();
+  const dayNames = ['일','월','화','수','목','금','토'];
+  grid.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - now.getDay() + i);
+    const isToday = d.toDateString() === now.toDateString();
+    const hasTasks = i % 2 === 0 || i === 3;
+    const div = document.createElement('div');
+    div.className = `week-day${isToday ? ' today' : ''}${hasTasks ? ' has-tasks' : ''}`;
+    div.innerHTML = `
+      <div class="wd-day">${dayNames[i]}</div>
+      <div class="wd-num">${d.getDate()}</div>
+      <div class="wd-dot"></div>
+    `;
+    grid.appendChild(div);
+  }
+}
+
+const SCHEDULE_DATA = [
+  { type: 'water', icon: '💧', title: '몬스테라 물 주기', desc: '흙이 2cm 이상 건조하면 충분히 물 주기', tag: '오늘' },
+  { type: 'water', icon: '💧', title: '아이비 물 주기', desc: '분무도 함께 진행', tag: '오늘' },
+  { type: 'fertilize', icon: '🌾', title: '스투키 비료 시비', desc: '액체 비료 1/4 희석 후 관수', tag: '이번 주' },
+  { type: 'repot', icon: '🪴', title: '아이비 분갈이 예정', desc: '뿌리가 배수홀 밖으로 나오기 시작함', tag: '다음 주' },
+  { type: 'water', icon: '🔍', title: '전체 해충 점검', desc: '진딧물·깍지벌레 등 정기 점검', tag: '이번 주' },
+];
+
+function renderSchedule() {
+  const list = document.getElementById('schedule-list');
+  list.innerHTML = SCHEDULE_DATA.map(s => `
+    <div class="schedule-item ${s.type}">
+      <div class="si-icon">${s.icon}</div>
+      <div class="si-body">
+        <h4>${s.title}</h4>
+        <p>${s.desc}</p>
+      </div>
+      <div class="si-tag">${s.tag}</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  NOTIFICATIONS
+// ═══════════════════════════════════════════════
+function toggleNotifications() {
+  if (!('Notification' in window)) {
+    showToast('⚠️ 미지원', '이 브라우저는 알림을 지원하지 않아요.');
+    return;
+  }
+  if (notifEnabled) {
+    notifEnabled = false;
+    document.getElementById('notifToggle').textContent = '🔔 알림 켜기';
+    document.getElementById('notifToggle').classList.remove('active');
+    showToast('🔕 알림 꺼짐', '푸시 알림이 비활성화되었어요.');
+    return;
+  }
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') {
+      notifEnabled = true;
+      document.getElementById('notifToggle').innerHTML = '🔔 알림 켜짐';
+      document.getElementById('notifToggle').classList.add('active');
+      showToast('🔔 알림 설정됨', '식물 케어 알림이 활성화되었어요!');
+      scheduleReminders();
+    } else {
+      showToast('❌ 권한 거부', '알림 권한을 허용해야 사용할 수 있어요.');
+    }
+  });
+}
+
+function scheduleReminders() {
+  // Immediate demo notification
+  setTimeout(() => sendPushNotif('💧 물 주기 알림', '몬스테라의 물 주는 날이에요! 지금 확인해보세요.'), 3000);
+  // Morning reminder (demo: every 30s for testing)
+  // In production use service worker + scheduled push
+}
+
+function sendReminder() {
+  if (notifEnabled && Notification.permission === 'granted') {
+    sendPushNotif('🌿 Verdant 케어 알림', '오늘의 식물 케어를 확인해보세요! 아직 완료하지 않은 항목이 있어요.');
+  } else {
+    showToast('🔔 인앱 알림', '오늘의 식물 케어를 확인해보세요! 아직 완료하지 않은 항목이 있어요.');
+  }
+}
+
+function sendPushNotif(title, body) {
+  if (notifEnabled && Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '🌿' });
+  }
+  showToast(title, body);
+}
+
+function checkMissedWater() {
+  const overdue = plants.filter(p => daysSince(p.lastWater) >= p.waterDays);
+  if (overdue.length > 0) {
+    setTimeout(() => {
+      showToast('💧 물 주기 알림', `${overdue.map(p=>p.name).join(', ')} 의 물 줄 시간이에요!`);
+    }, 2000);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+let toastTimer = null;
+function showToast(title, msg) {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-title').textContent = title;
+  document.getElementById('toast-msg').textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+// ═══════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
+
+// Drag & drop
+const uz = document.getElementById('upload-zone');
+if (uz) {
+  uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag-over'); });
+  uz.addEventListener('dragleave', () => uz.classList.remove('drag-over'));
+  uz.addEventListener('drop', e => {
+    e.preventDefault(); uz.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) { document.getElementById('diag-file-input').files = e.dataTransfer.files; onFileSelect({ target: { files: [file] } }); }
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  CAMERA
+// ═══════════════════════════════════════════════
+let cameraStream = null;
+let cameraFacing = 'environment'; // 'environment'=후면, 'user'=전면
+let cameraTarget = 'daily';       // 'daily' | 'diag'
+let capturedDataUrl = null;
+
+async function openCamera(target) {
+  cameraTarget = target;
+  capturedDataUrl = null;
+
+  // 라벨 텍스트
+  document.getElementById('cam-label-text').textContent =
+    target === 'diag' ? '진단용 식물 촬영' : '오늘의 식물 촬영';
+
+  // 뷰파인더 & UI 초기화
+  showLiveView();
+
+  // 카메라 스트림 시작
+  await startStream(cameraFacing);
+
+  document.getElementById('camera-modal-bg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+async function startStream(facing) {
+  // 기존 스트림 정지
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+
+  const video = document.getElementById('camera-video');
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } },
+      audio: false
+    });
+    video.srcObject = cameraStream;
+    await video.play();
+
+    // 모드 버튼 표시 동기화
+    document.getElementById('mode-env').classList.toggle('active', facing === 'environment');
+    document.getElementById('mode-user').classList.toggle('active', facing === 'user');
+    cameraFacing = facing;
+  } catch (err) {
+    showToast('⚠️ 카메라 오류', '카메라 접근이 거부되었거나 사용할 수 없습니다.');
+    closeCamera();
+  }
+}
+
+async function switchFacing(forceFacing) {
+  const next = forceFacing || (cameraFacing === 'environment' ? 'user' : 'environment');
+  await startStream(next);
+}
+
+function capturePhoto() {
+  const video  = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+
+  // 전면 카메라는 좌우 반전해서 자연스럽게
+  if (cameraFacing === 'user') {
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+  } else {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  }
+
+  capturedDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+  // 미리보기 표시
+  document.getElementById('cam-preview-shot').src = capturedDataUrl;
+  showPreviewView();
+
+  // 스트림 일시 정지 (배터리 절약)
+  if (cameraStream) cameraStream.getTracks().forEach(t => { if (t.kind === 'video') t.enabled = false; });
+}
+
+function retakePhoto() {
+  capturedDataUrl = null;
+  // 스트림 재개
+  if (cameraStream) cameraStream.getTracks().forEach(t => { t.enabled = true; });
+  showLiveView();
+}
+
+function savePhoto() {
+  if (!capturedDataUrl) return;
+
+  if (cameraTarget === 'daily') {
+    dailyPhotos.push(capturedDataUrl);
+    renderDailyPhotos();
+    showToast('📸 저장 완료', '오늘의 식물 사진이 기록되었어요!');
+  } else if (cameraTarget === 'diag') {
+    // 진단 탭 미리보기 업데이트
+    diagImageBase64 = capturedDataUrl.split(',')[1];
+    const img = document.getElementById('preview-img');
+    img.src = capturedDataUrl;
+    img.style.display = 'block';
+    showToast('📸 사진 등록', '촬영된 사진으로 AI 진단을 진행하세요.');
+  }
+
+  closeCamera();
+}
+
+function closeCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  document.getElementById('camera-modal-bg').classList.remove('open');
+  document.body.style.overflow = '';
+  capturedDataUrl = null;
+}
+
+function showLiveView() {
+  document.getElementById('cam-live-wrap').style.display = 'block';
+  document.getElementById('cam-live-ui').style.display   = 'flex';
+  document.getElementById('cam-preview-wrap').style.display = 'none';
+  document.getElementById('cam-preview-ui').style.display   = 'none';
+}
+
+function showPreviewView() {
+  document.getElementById('cam-live-wrap').style.display = 'none';
+  document.getElementById('cam-live-ui').style.display   = 'none';
+  document.getElementById('cam-preview-wrap').style.display = 'block';
+  document.getElementById('cam-preview-ui').style.display   = 'flex';
+}
+
+// ESC 키로 카메라 닫기
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('camera-modal-bg').classList.contains('open')) {
+    closeCamera();
+  }
+});
+</script>
+</body>
+</html>
+
